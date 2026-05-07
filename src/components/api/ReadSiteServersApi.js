@@ -1,4 +1,9 @@
 import { supabaseSelect, SUPABASE_SITE_SERVERS_TABLE } from './supabaseClient';
+import { PWM_APP_NAMES } from '../Constants';
+
+const getNormalizedAppName = (appName) => (
+  PWM_APP_NAMES.includes(appName) ? 'PWM' : appName
+);
 
 export async function fetchSiteServers(siteAbbr, siteEnv) {
   const params = new URLSearchParams({
@@ -12,16 +17,19 @@ export async function fetchSiteServers(siteAbbr, siteEnv) {
 
   return rows.reduce(
     (acc, row) => {
-      const appName = row.app_nm || 'Unknown';
+      const appName = getNormalizedAppName(row.app_nm) || 'Unknown';
+      const serverType = row.app_server_type || row.server_type;
+      const serverName = row.app_server_node_nm || row.server_name;
+      const serverIp = row.app_server_ip || row.server_ip;
 
       if (!acc.servers_by_app[appName]) {
         acc.servers_by_app[appName] = [];
       }
 
       acc.servers_by_app[appName].push({
-        server_type: row.app_server_type,
-        server_name: row.app_server_node_nm,
-        server_ip: row.app_server_ip
+        server_type: serverType,
+        server_name: serverName,
+        server_ip: serverIp
       });
       return acc;
     },
