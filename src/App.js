@@ -1,5 +1,4 @@
-import React, { useEffect, useMemo, useState, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import {
   CssBaseline,
@@ -19,14 +18,6 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import SnoozeIcon from '@mui/icons-material/Snooze';
 import AccessibleNavigationAnnouncer from './components/AccessibleNavigationAnnouncer';
 import MainDashboard from './pages/MainDashboard';
-
-function RedirectToMainDashboard() {
-  const navigate = useNavigate();
-  useEffect(() => {
-    navigate('/main-dashboard', { replace: true });
-  }, [navigate]);
-  return null;
-}
 
 function UpdateBanner({ countdown, onRefreshNow, onClose }) {
   return (
@@ -53,11 +44,15 @@ function UpdateBanner({ countdown, onRefreshNow, onClose }) {
 }
 
 function App() {
-  const [mode, setMode] = useState(localStorage.getItem('dashboardTheme') || 'light');
+  const [mode, setMode] = useState('light');
   const [shouldDisplay, setShouldDisplay] = useState(false);
   const [reloadCountdown, setReloadCountdown] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+
+  useEffect(() => {
+    setMode(localStorage.getItem('dashboardTheme') || 'light');
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('dashboardTheme', mode);
@@ -124,44 +119,31 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Router>
-        <AccessibleNavigationAnnouncer />
+      <AccessibleNavigationAnnouncer />
 
-        {!isDetailsOpen && (
-          <Box sx={{ position: 'fixed', top: 12, right: 12, zIndex: 1400 }}>
-            <IconButton
-              onClick={toggleTheme}
-              color="primary"
-              sx={{ bgcolor: 'background.paper', boxShadow: 3 }}
-            >
-              {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
-            </IconButton>
-          </Box>
-        )}
-        {shouldDisplay && (
-          <UpdateBanner
-            countdown={reloadCountdown}
-            onRefreshNow={handleRefreshNow}
-            onClose={() => setShouldDisplay(false)}
-          />
-        )}
+      {!isDetailsOpen && (
+        <Box sx={{ position: 'fixed', top: 12, right: 12, zIndex: 1400 }}>
+          <IconButton
+            onClick={toggleTheme}
+            color="primary"
+            sx={{ bgcolor: 'background.paper', boxShadow: 3 }}
+          >
+            {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
+          </IconButton>
+        </Box>
+      )}
+      {shouldDisplay && (
+        <UpdateBanner
+          countdown={reloadCountdown}
+          onRefreshNow={handleRefreshNow}
+          onClose={() => setShouldDisplay(false)}
+        />
+      )}
 
-        <Suspense fallback={<div>Loading...</div>}>
-          <Routes>
-            <Route
-              path="/main-dashboard"
-              element={
-                <MainDashboard
-                  refreshKey={refreshKey}
-                  setIsDetailsOpen={setIsDetailsOpen}
-                />
-              }
-            />
-            <Route path="/" element={<RedirectToMainDashboard />} />
-          </Routes>
-        </Suspense>
-
-      </Router>
+      <MainDashboard
+        refreshKey={refreshKey}
+        setIsDetailsOpen={setIsDetailsOpen}
+      />
     </ThemeProvider>
   );
 }

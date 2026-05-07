@@ -18,8 +18,9 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import SiteCard from '../components/SiteCard';
 import { fetchWhseDashboardData } from '../components/api/ReadSitesApi';
 import { PWM_APP_NAMES } from '../components/Constants';
-import pgtLogo from '../assets/icons/PGT_Logo.png';
 import SiteDetailsDrawer from '../components/SiteDetailsDrawer';
+
+const pgtLogo = '/PGT_Logo.png';
 
 function MainDashboard({ refreshKey, setIsDetailsOpen }) {
   const [sites, setSites] = useState([]);
