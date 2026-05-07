@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogTitle,
   Button,
+  Chip,
   Stack,
   Typography,
   IconButton,
@@ -14,10 +15,13 @@ import {
 } from '@mui/material';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
+import LogoutIcon from '@mui/icons-material/Logout';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SnoozeIcon from '@mui/icons-material/Snooze';
 import AccessibleNavigationAnnouncer from './components/AccessibleNavigationAnnouncer';
+import AuthGate from './components/AuthGate';
 import MainDashboard from './pages/MainDashboard';
+import { supabase } from './components/api/supabaseClient';
 
 function UpdateBanner({ countdown, onRefreshNow, onClose }) {
   return (
@@ -115,35 +119,62 @@ function App() {
     setReloadCountdown(0);
     setRefreshKey(prev => prev + 1);
   };
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AccessibleNavigationAnnouncer />
 
-      {!isDetailsOpen && (
-        <Box sx={{ position: 'fixed', top: 12, right: 12, zIndex: 1400 }}>
-          <IconButton
-            onClick={toggleTheme}
-            color="primary"
-            sx={{ bgcolor: 'background.paper', boxShadow: 3 }}
-          >
-            {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
-          </IconButton>
-        </Box>
-      )}
-      {shouldDisplay && (
-        <UpdateBanner
-          countdown={reloadCountdown}
-          onRefreshNow={handleRefreshNow}
-          onClose={() => setShouldDisplay(false)}
-        />
-      )}
+      <AuthGate>
+        {(session) => (
+          <>
+            {!isDetailsOpen && (
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{ position: 'fixed', top: 12, right: 12, zIndex: 1400 }}
+              >
+                <Chip
+                  label={session.user.email || 'Signed in'}
+                  variant="outlined"
+                  sx={{ bgcolor: 'background.paper', boxShadow: 3 }}
+                />
+                <Button
+                  color="inherit"
+                  startIcon={<LogoutIcon />}
+                  onClick={handleSignOut}
+                  sx={{ bgcolor: 'background.paper', boxShadow: 3 }}
+                >
+                  Sign out
+                </Button>
+                <IconButton
+                  onClick={toggleTheme}
+                  color="primary"
+                  sx={{ bgcolor: 'background.paper', boxShadow: 3 }}
+                >
+                  {mode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
+                </IconButton>
+              </Stack>
+            )}
+            {shouldDisplay && (
+              <UpdateBanner
+                countdown={reloadCountdown}
+                onRefreshNow={handleRefreshNow}
+                onClose={() => setShouldDisplay(false)}
+              />
+            )}
 
-      <MainDashboard
-        refreshKey={refreshKey}
-        setIsDetailsOpen={setIsDetailsOpen}
-      />
+            <MainDashboard
+              refreshKey={refreshKey}
+              setIsDetailsOpen={setIsDetailsOpen}
+            />
+          </>
+        )}
+      </AuthGate>
     </ThemeProvider>
   );
 }

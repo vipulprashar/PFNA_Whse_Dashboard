@@ -1,3 +1,5 @@
+import { createClient } from '@supabase/supabase-js';
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
@@ -18,16 +20,29 @@ function getSupabaseConfig() {
   };
 }
 
+const { url, key } = getSupabaseConfig();
+
+export const supabase = createClient(url, key, {
+  auth: {
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    persistSession: true
+  }
+});
+
 export async function supabaseSelect(tableName, searchParams = new URLSearchParams()) {
-  const { url, key } = getSupabaseConfig();
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
   const params = searchParams.toString();
   const endpoint = `${url}/rest/v1/${encodeURIComponent(tableName)}${params ? `?${params}` : ''}`;
+  const authorizationToken = session?.access_token || key;
 
   const response = await fetch(endpoint, {
     method: 'GET',
     headers: {
       apikey: key,
-      Authorization: `Bearer ${key}`,
+      Authorization: `Bearer ${authorizationToken}`,
       Accept: 'application/json'
     }
   });
