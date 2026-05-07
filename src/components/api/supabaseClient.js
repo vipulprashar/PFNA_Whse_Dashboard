@@ -21,6 +21,7 @@ function getSupabaseConfig() {
 }
 
 const { url, key } = getSupabaseConfig();
+const SUPABASE_PAGE_SIZE = 1000;
 
 export const supabase = createClient(url, key, {
   auth: {
@@ -37,20 +38,52 @@ export async function supabaseSelect(tableName, searchParams = new URLSearchPara
   const params = searchParams.toString();
   const endpoint = `${url}/rest/v1/${encodeURIComponent(tableName)}${params ? `?${params}` : ''}`;
   const authorizationToken = session?.access_token || key;
+  const rows = [];
+  let rangeStart = 0;
 
-  const response = await fetch(endpoint, {
-    method: 'GET',
-    headers: {
-      apikey: key,
-      Authorization: `Bearer ${authorizationToken}`,
-      Accept: 'application/json'
+  while (true) {
+    const rangeEnd = rangeStart + SUPABASE_PAGE_SIZE - 1;
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${authorizationToken}`,
+        Accept: 'application/json',
+        'Range-Unit': 'items',
+        Range: `${rangeStart}-${rangeEnd}`
+      }
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      throw new Error(`Supabase request failed for ${tableName}: ${response.status} ${detail}`);
     }
-  });
 
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`Supabase request failed for ${tableName}: ${response.status} ${detail}`);
+    const pageRows = await response.json();
+    rows.push(...pageRows);
+
+    const contentRange = response.headers.get('content-range');
+    const rangeMatch = contentRange?.match(/^(\d+)-(\d+)\/(?:(\d+)|\*)$/);
+
+    if (rangeMatch) {
+      const returnedEnd = Number(rangeMatch[2]);
+      const totalRows = rangeMatch[3] ? Number(rangeMatch[3]) : null;
+      const nextStart = returnedEnd + 1;
+
+      if (pageRows.length === 0 || (totalRows !== null && nextStart >= totalRows)) {
+        break;
+      }
+
+      rangeStart = nextStart;
+      continue;
+    }
+
+    if (pageRows.length < SUPABASE_PAGE_SIZE) {
+      break;
+    }
+
+    rangeStart += SUPABASE_PAGE_SIZE;
   }
 
-  return response.json();
+  return rows;
 }
